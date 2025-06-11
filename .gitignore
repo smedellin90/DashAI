@@ -1,0 +1,48 @@
+# Ignore build directory
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Ignore binaries
+*.o
+*.obj
+*.so
+*.a
+*.out
+*.exe
+*.bin
+*.elf
+*.log
+
+# Ignore generated files
+*.d
+*.depend
+*.ninja
+*.ninja_deps
+*.ninja_log
+*.swp
+
+# Ignore IDE/editor metadata
+.vscode/
+.cache/
+.idea/
+*.code-workspace
+*.DS_Store
+*.clangd
+*.ccls-cache/
+tags
+
+# Ignore backup or temp files
+*~
+*.bak
+*.tmp
+
+# Explicitly keep only source and CMake files
+!CMakeLists.txt
+!*.cmake
+!*.cpp
+!*.hpp
+!*.h
