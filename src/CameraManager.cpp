@@ -1,4 +1,5 @@
 #include "CameraManager.hpp"
+#include "libcamera/camera.h"
 
 #include <libcamera/camera_manager.h>
 #include <libcamera/framebuffer_allocator.h>
@@ -40,6 +41,8 @@ void CameraManager::startCapture() {
 }
 
 void CameraManager::captureLoop() {
+    std::cout << "[INFO] Starting Capture loop." << std::endl;
+
     camManager = std::make_shared<libcamera::CameraManager>();
     camManager->start();
 
@@ -54,6 +57,8 @@ void CameraManager::captureLoop() {
         return;
     }
 
+    std::cout << "[INFO] Creating roles." << std::endl; 
+
     std::vector<libcamera::StreamRole> roles = { libcamera::StreamRole::Viewfinder };
     std::unique_ptr<libcamera::CameraConfiguration> config = camera->generateConfiguration(roles);
     if (!config || config->size() != 1) {
@@ -61,14 +66,22 @@ void CameraManager::captureLoop() {
         return;
     }
 
+    std::cout << "[INFO] Setting up config." << std::endl;  
+
     config->at(0).pixelFormat = libcamera::formats::RGB888;
     config->at(0).size = {640, 480};
-    currentStreamConfig = config->at(0);
+    if (config->validate() == libcamera::CameraConfiguration::Invalid)
+    {
+        std::cerr << "Camera configuration is invalid." << std::endl;
+        return;
+    }
 
     if (camera->configure(config.get()) < 0) {
         std::cerr << "Camera configuration failed." << std::endl;
         return;
     }
+
+    currentStreamConfig = config->at(0);
 
     libcamera::Stream *stream = currentStreamConfig.stream();
 
@@ -79,12 +92,18 @@ void CameraManager::captureLoop() {
     }
 
     const auto &buffers = allocator.buffers(stream);
-    if (buffers.empty()) {
+    if (buffers.empty()) 
+    {
         std::cerr << "No buffers available." << std::endl;
         return;
     }
 
-    // ✅ Connect signal to member function
+    if (camera->start() < 0) 
+    {
+        std::cerr << "Camera start failed." << std::endl;
+        return;
+    }
+
     camera->requestCompleted.connect(this, std::bind(&CameraManager::handleRequest, this, std::placeholders::_1));
 
     for (const auto &buffer : buffers) {
@@ -96,10 +115,6 @@ void CameraManager::captureLoop() {
         camera->queueRequest(request.release());
     }
 
-    if (camera->start() < 0) {
-        std::cerr << "Camera start failed." << std::endl;
-        return;
-    }
 
     while (running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
