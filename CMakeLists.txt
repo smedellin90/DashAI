@@ -4,8 +4,6 @@ project(DashAI)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(OpenCV REQUIRED)
-
-# Use pkg-config to find libcamera flags
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 
@@ -21,4 +19,12 @@ add_executable(dashai
     src/CameraManager.cpp
 )
 
-target_link_libraries(dashai ${OpenCV_LIBS} ${LIBCAMERA_LIBS} pthread)
+target_link_libraries(dashai
+    ${OpenCV_LIBS}
+    ${LIBCAMERA_LIBRARIES}
+    pthread
+    -lcamera
+    -lcamera-base
+)
+
+target_compile_options(dashai PRIVATE ${LIBCAMERA_CFLAGS_OTHER})
