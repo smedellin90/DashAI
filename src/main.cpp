@@ -1,27 +1,29 @@
-// main.cpp
 #include "CameraManager.hpp"
-// #include "EventDetector.hpp"
-// #include "MockIMU.hpp"
-#include <thread>
+#include <iostream>
 #include <chrono>
+#include <thread>
+// #include <opencv2/opencv.hpp>
 
-int main() 
-{
+int main() {
     CameraManager camera;
-    // MockIMU imu;
-    // EventDetector detector(&imu);
-
     camera.startCapture();
-    // detector.startMonitoring(camera);
 
-    // Main thread sleeps while others work
-    while (true) 
-    {
+    std::cout << "[INFO] Camera capture started. Checking for frames..." << std::endl;
+
+    while (true) {
         cv::Mat frame = camera.getLatestFrame();
-        if (!frame.empty())
-            std::cout << "Captured Frame size: " << frame.cols << "x" << frame.rows << std::endl;
-        else
-            std::cout << "No frame captured yet" << std::endl;
+
+        if (!frame.empty()) {
+            std::cout << "[FRAME] Captured: " << frame.cols << "x" << frame.rows << std::endl;
+
+            // Optional: show frame (comment out if headless)
+            /*
+            cv::imshow("Live Feed", frame);
+            if (cv::waitKey(1) == 27) break; // ESC to exit
+            */
+        } else {
+            std::cout << "[WAIT] No frame yet..." << std::endl;
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
