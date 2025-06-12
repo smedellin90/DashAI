@@ -7,6 +7,8 @@
 #include <libcamera/request.h>
 #include <libcamera/formats.h>
 
+#include <opencv2/core.hpp>
+#include <opencv2/core/cvstd.hpp>
 #include <opencv2/opencv.hpp>
 
 #include <iostream>
@@ -30,9 +32,8 @@ CameraManager::~CameraManager() {
         camera->release();
     }
 
-    if (camManager) {
+    if (camManager)
         camManager->stop();
-    }
 }
 
 void CameraManager::startCapture() {
@@ -134,7 +135,7 @@ void CameraManager::handleRequest(libcamera::Request *request) {
     if (request->status() == libcamera::Request::RequestCancelled)
         return;
 
-    for (auto &[stream, buffer] : request->buffers()) {
+    for (auto &[_ , buffer] : request->buffers()) { // &[steam, buffer]
         cv::Mat frame = convertFrame(buffer, currentStreamConfig);
 
         if (!frame.empty()) 
@@ -146,8 +147,12 @@ void CameraManager::handleRequest(libcamera::Request *request) {
         }
     }
 
-    request->reuse(libcamera::Request::ReuseBuffers);
-    camera->queueRequest(request);
+    if (!request->hasPendingBuffers()) {
+        request->reuse(libcamera::Request::ReuseBuffers);
+        camera->queueRequest(request);
+    } else {
+        std::cerr << "[ERROR] Tried to reuse request with pending buffers!" << std::endl;
+    }
 }
 
 cv::Mat CameraManager::convertFrame(libcamera::FrameBuffer *buffer, const libcamera::StreamConfiguration &config) {
