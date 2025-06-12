@@ -2,31 +2,39 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-// #include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>  // for imwrite
 
 int main() {
-    CameraManager camera;
-    camera.startCapture();
+    CameraManager cam;
+    cam.startCapture();
 
     std::cout << "[INFO] Camera capture started. Checking for frames..." << std::endl;
 
-    while (true) {
-        cv::Mat frame = camera.getLatestFrame();
+    int framesCaptured = 0;
+
+    while (framesCaptured < 20) {
+        cv::Mat frame = cam.getLatestFrame();
 
         if (!frame.empty()) {
-            std::cout << "[FRAME] Captured: " << frame.cols << "x" << frame.rows << std::endl;
+            std::cout << "[FRAME " << framesCaptured << "] "
+                      << "Resolution: " << frame.cols << "x" << frame.rows
+                      << ", Mean Pixel: " << cv::mean(frame) << std::endl;
 
-            // Optional: show frame (comment out if headless)
-            /*
-            cv::imshow("Live Feed", frame);
-            if (cv::waitKey(1) == 27) break; // ESC to exit
-            */
+            if (framesCaptured == 0) {
+                // Save first frame to disk
+                cv::imwrite("test_frame.jpg", frame);
+                std::cout << "[INFO] Saved test_frame.jpg" << std::endl;
+            }
+
+            framesCaptured++;
         } else {
             std::cout << "[WAIT] No frame yet..." << std::endl;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    std::cout << "[INFO] Done capturing. Exiting." << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(4));
     return 0;
 }
