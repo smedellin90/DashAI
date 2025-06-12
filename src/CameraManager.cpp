@@ -46,13 +46,15 @@ void CameraManager::captureLoop() {
     camManager = std::make_shared<libcamera::CameraManager>();
     camManager->start();
 
-    if (camManager->cameras().empty()) {
+    if (camManager->cameras().empty()) 
+    {
         std::cerr << "No cameras available." << std::endl;
         return;
     }
 
     camera = camManager->get(camManager->cameras()[0]->id());
-    if (!camera || camera->acquire()) {
+    if (!camera || camera->acquire()) 
+    {
         std::cerr << "Failed to acquire camera." << std::endl;
         return;
     }
@@ -61,7 +63,8 @@ void CameraManager::captureLoop() {
 
     std::vector<libcamera::StreamRole> roles = { libcamera::StreamRole::Viewfinder };
     std::unique_ptr<libcamera::CameraConfiguration> config = camera->generateConfiguration(roles);
-    if (!config || config->size() != 1) {
+    if (!config || config->size() != 1) 
+    {
         std::cerr << "Failed to generate configuration." << std::endl;
         return;
     }
@@ -76,7 +79,8 @@ void CameraManager::captureLoop() {
         return;
     }
 
-    if (camera->configure(config.get()) < 0) {
+    if (camera->configure(config.get()) < 0) 
+    {
         std::cerr << "Camera configuration failed." << std::endl;
         return;
     }
@@ -86,7 +90,8 @@ void CameraManager::captureLoop() {
     libcamera::Stream *stream = currentStreamConfig.stream();
 
     libcamera::FrameBufferAllocator allocator(camera);
-    if (allocator.allocate(stream) < 0) {
+    if (allocator.allocate(stream) < 0)
+    {
         std::cerr << "Buffer allocation failed." << std::endl;
         return;
     }
@@ -104,11 +109,16 @@ void CameraManager::captureLoop() {
         return;
     }
 
-    camera->requestCompleted.connect(this, std::bind(&CameraManager::handleRequest, this, std::placeholders::_1));
+    camera->requestCompleted.connect(this, [this](libcamera::Request *request) { 
+        handleRequest(request);
+    });
 
-    for (const auto &buffer : buffers) {
+
+    for (const auto &buffer : buffers)
+    {
         std::unique_ptr<libcamera::Request> request = camera->createRequest();
-        if (!request || request->addBuffer(stream, buffer.get()) < 0) {
+        if (!request || request->addBuffer(stream, buffer.get()) < 0) 
+        {
             std::cerr << "Request creation or buffer binding failed." << std::endl;
             return;
         }
@@ -116,9 +126,8 @@ void CameraManager::captureLoop() {
     }
 
 
-    while (running) {
+    while (running) 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
 }
 
 void CameraManager::handleRequest(libcamera::Request *request) {
@@ -128,7 +137,8 @@ void CameraManager::handleRequest(libcamera::Request *request) {
     for (auto &[stream, buffer] : request->buffers()) {
         cv::Mat frame = convertFrame(buffer, currentStreamConfig);
 
-        if (!frame.empty()) {
+        if (!frame.empty()) 
+        {
             std::lock_guard<std::mutex> lock(bufferMutex);
             if (frameBuffer.size() >= maxBufferSize)
                 frameBuffer.pop_front();
@@ -150,7 +160,8 @@ cv::Mat CameraManager::convertFrame(libcamera::FrameBuffer *buffer, const libcam
         return {};
 
     void *memory = mmap(nullptr, planes[0].length, PROT_READ, MAP_SHARED, buffer->planes()[0].fd.get(), 0);
-    if (memory == MAP_FAILED) {
+    if (memory == MAP_FAILED) 
+    {
         std::cerr << "Failed to mmap frame buffer." << std::endl;
         return {};
     }
@@ -166,12 +177,14 @@ cv::Mat CameraManager::convertFrame(libcamera::FrameBuffer *buffer, const libcam
     return copy;
 }
 
-cv::Mat CameraManager::getLatestFrame() {
+cv::Mat CameraManager::getLatestFrame() 
+{
     std::lock_guard<std::mutex> lock(bufferMutex);
     return frameBuffer.empty() ? cv::Mat() : frameBuffer.back();
 }
 
-std::deque<cv::Mat> CameraManager::getFrameBuffer() {
+std::deque<cv::Mat> CameraManager::getFrameBuffer() 
+{
     std::lock_guard<std::mutex> lock(bufferMutex);
     return frameBuffer;
 }
