@@ -3,6 +3,18 @@
 #include <chrono>
 #include <thread>
 #include <opencv2/imgcodecs.hpp>  // for imwrite
+#include <string.h>
+
+std::string getTimestampedFilename(const std::string &dir = "frames/", const std::string &prefix = "test_frame", const std::string &ext = ".jpg") {
+    auto now = std::time(nullptr);
+    std::tm *tm = std::localtime(&now);
+
+    std::ostringstream oss;
+    oss << dir << prefix << "_"
+        << std::put_time(tm, "%Y-%m-%d_%H-%M-%S")
+        << ext;
+    return oss.str();
+}
 
 int main() {
     CameraManager cam;
@@ -22,8 +34,9 @@ int main() {
 
             if (framesCaptured == 0) {
                 // Save first frame to disk
-                cv::imwrite("test_frame.jpg", frame);
-                std::cout << "[INFO] Saved test_frame.jpg" << std::endl;
+                const std::string filename = getTimestampedFilename();
+                cv::imwrite(filename, frame);
+                std::cout << "[INFO] Saved " << filename << std::endl;
             }
 
             framesCaptured++;
