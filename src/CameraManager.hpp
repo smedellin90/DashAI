@@ -13,6 +13,7 @@
 #include <mutex>
 #include <deque>
 #include <memory>
+#include <condition_variable>
 
 class CameraManager {
 public:
@@ -38,6 +39,11 @@ private:
     std::shared_ptr<libcamera::CameraManager> camManager;
     std::shared_ptr<libcamera::Camera> camera;
     libcamera::StreamConfiguration currentStreamConfig;
+    std::atomic<bool> shuttingDown = false;
+    std::set<libcamera::Request *> inFlightRequests;
+    std::mutex inFlightMutex;
+    std::condition_variable inFlightCondition;
+    std::unique_ptr<libcamera::FrameBufferAllocator> allocator;
 };
 
 #endif // CAMERA_MANAGER_HPP

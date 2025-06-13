@@ -7,6 +7,7 @@
 #include <libcamera/request.h>
 #include <libcamera/formats.h>
 
+#include <memory>
 #include <opencv2/core.hpp>
 #include <opencv2/core/cvstd.hpp>
 #include <opencv2/opencv.hpp>
@@ -24,12 +25,30 @@ CameraManager::CameraManager() : running(false) {}
 
 CameraManager::~CameraManager() {
     running = false;
+    shuttingDown = true;
+
     if (captureThread.joinable())
         captureThread.join();
 
+    {
+        std::unique_lock<std::mutex> lock(inFlightMutex);
+        inFlightCondition.wait(lock, [this]() {
+            return inFlightRequests.empty();
+        });
+    }
+
     if (camera) {
         camera->stop();
+
+        if (allocator && currentStreamConfig.stream()) {
+            if (allocator->free(currentStreamConfig.stream()) < 0) {
+                std::cerr << "[WARN] Failed to free buffers." << std::endl;
+            }
+        }
+        allocator.reset();
+
         camera->release();
+        camera.reset();
     }
 
     if (camManager)
@@ -90,14 +109,14 @@ void CameraManager::captureLoop() {
 
     libcamera::Stream *stream = currentStreamConfig.stream();
 
-    libcamera::FrameBufferAllocator allocator(camera);
-    if (allocator.allocate(stream) < 0)
+    allocator = std::make_unique<libcamera::FrameBufferAllocator>(camera);
+    if (allocator->allocate(stream) < 0)
     {
         std::cerr << "Buffer allocation failed." << std::endl;
         return;
     }
 
-    const auto &buffers = allocator.buffers(stream);
+    const auto &buffers = allocator->buffers(stream);
     if (buffers.empty()) 
     {
         std::cerr << "No buffers available." << std::endl;
@@ -114,18 +133,20 @@ void CameraManager::captureLoop() {
         handleRequest(request);
     });
 
-
-    for (const auto &buffer : buffers)
-    {
+    for (const auto &buffer : buffers) {
         std::unique_ptr<libcamera::Request> request = camera->createRequest();
-        if (!request || request->addBuffer(stream, buffer.get()) < 0) 
-        {
+        if (!request || request->addBuffer(stream, buffer.get()) < 0) {
             std::cerr << "Request creation or buffer binding failed." << std::endl;
             return;
         }
+
+        {
+            std::lock_guard<std::mutex> lock(inFlightMutex);
+            inFlightRequests.insert(request.get());
+        }
+
         camera->queueRequest(request.release());
     }
-
 
     while (running) 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -135,11 +156,10 @@ void CameraManager::handleRequest(libcamera::Request *request) {
     if (request->status() == libcamera::Request::RequestCancelled)
         return;
 
-    for (auto &[_ , buffer] : request->buffers()) { // &[steam, buffer]
+    for (auto &[_ , buffer] : request->buffers()) {
         cv::Mat frame = convertFrame(buffer, currentStreamConfig);
 
-        if (!frame.empty()) 
-        {
+        if (!frame.empty()) {
             std::lock_guard<std::mutex> lock(bufferMutex);
             if (frameBuffer.size() >= maxBufferSize)
                 frameBuffer.pop_front();
@@ -147,11 +167,21 @@ void CameraManager::handleRequest(libcamera::Request *request) {
         }
     }
 
-    if (!request->hasPendingBuffers()) {
-        request->reuse(libcamera::Request::ReuseBuffers);
+    {
+        std::lock_guard<std::mutex> lock(inFlightMutex);
+        inFlightRequests.erase(request);
+        inFlightCondition.notify_all();
+    }
+
+    if (shuttingDown)
+        return;
+
+    request->reuse(libcamera::Request::ReuseBuffers);
+
+    {
+        std::lock_guard<std::mutex> lock(inFlightMutex);
+        inFlightRequests.insert(request);
         camera->queueRequest(request);
-    } else {
-        std::cerr << "[ERROR] Tried to reuse request with pending buffers!" << std::endl;
     }
 }
 
