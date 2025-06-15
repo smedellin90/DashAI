@@ -17,6 +17,7 @@ link_directories(${LIBCAMERA_LIBRARY_DIRS})
 add_executable(dashai
     src/main.cpp
     src/CameraManager.cpp
+    src/CircularMatBuffer.cpp
 )
 
 target_link_libraries(dashai

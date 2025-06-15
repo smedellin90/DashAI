@@ -21,7 +21,9 @@
 
 // using namespace libcamera;
 
-CameraManager::CameraManager() : running(false) {}
+CameraManager::CameraManager(size_t bufferSize) 
+    : running(false),
+    frameBuffer(bufferSize) {}
 
 CameraManager::~CameraManager() {
     running = false;
@@ -160,10 +162,7 @@ void CameraManager::handleRequest(libcamera::Request *request) {
         cv::Mat frame = convertFrame(buffer, currentStreamConfig);
 
         if (!frame.empty()) {
-            std::lock_guard<std::mutex> lock(bufferMutex);
-            if (frameBuffer.size() >= maxBufferSize)
-                frameBuffer.pop_front();
-            frameBuffer.push_back(frame);
+            frameBuffer.push(frame);
         }
     }
 
@@ -214,12 +213,10 @@ cv::Mat CameraManager::convertFrame(libcamera::FrameBuffer *buffer, const libcam
 
 cv::Mat CameraManager::getLatestFrame() 
 {
-    std::lock_guard<std::mutex> lock(bufferMutex);
-    return frameBuffer.empty() ? cv::Mat() : frameBuffer.back();
+    return frameBuffer.latest();
 }
 
 std::deque<cv::Mat> CameraManager::getFrameBuffer() 
 {
-    std::lock_guard<std::mutex> lock(bufferMutex);
-    return frameBuffer;
+    return frameBuffer.snapshot();
 }

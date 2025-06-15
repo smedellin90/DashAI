@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CircularMatBuffer.hpp"
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
 #include <libcamera/framebuffer.h>
@@ -16,7 +17,7 @@
 
 class CameraManager {
 public:
-    CameraManager();
+    CameraManager(size_t bufferSize = 30);
     ~CameraManager();
 
     void startCapture();
@@ -30,9 +31,10 @@ private:
 
     std::thread captureThread;
     std::atomic<bool> running;
-    std::mutex bufferMutex;
+    // std::mutex bufferMutex;
 
-    std::deque<cv::Mat> frameBuffer;
+    // std::deque<cv::Mat> frameBuffer;
+    CircularMatBuffer frameBuffer;
     const size_t maxBufferSize = 150;
 
     std::shared_ptr<libcamera::CameraManager> camManager;
