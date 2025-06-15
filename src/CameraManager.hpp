@@ -1,5 +1,4 @@
-#ifndef CAMERA_MANAGER_HPP
-#define CAMERA_MANAGER_HPP
+#pragma once
 
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
@@ -46,4 +45,3 @@ private:
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator;
 };
 
-#endif // CAMERA_MANAGER_HPP
