@@ -1,6 +1,7 @@
 #include "CameraManager.hpp"
 #include "libcamera/camera.h"
 
+#include <chrono>
 #include <libcamera/camera_manager.h>
 #include <libcamera/framebuffer_allocator.h>
 #include <libcamera/stream.h>
@@ -21,9 +22,8 @@
 
 // using namespace libcamera;
 
-CameraManager::CameraManager(size_t bufferSize) 
-    : running(false),
-    frameBuffer(bufferSize) {}
+CameraManager::CameraManager(const CameraConfig &config) 
+    : config_(config), frameBuffer(config.bufferCapacity, config.postEventDuration) {}
 
 CameraManager::~CameraManager() {
     running = false;
@@ -162,31 +162,32 @@ void CameraManager::handleRequest(libcamera::Request *request) {
         cv::Mat frame = convertFrame(buffer, currentStreamConfig);
 
         if (!frame.empty()) {
-            frameBuffer.push(frame);
+            Timestamped<cv::Mat> tmat = {frame, std::chrono::steady_clock::now()};
+            frameBuffer.push(tmat);
             if (!eventTriggered && detectEvent(frame)) {
                 std::cout << "[EVENT] Motion detected. Saving buffer..." << std::endl;
                 eventTriggered = true;
 
                 // Save pre-event frames
-                std::vector<cv::Mat> snapshot = frameBuffer.snapshot();
+                std::vector<Timestamped<cv::Mat>> snapshot = frameBuffer.snapshot();
                 int index = 0;
-                for (const auto &f : snapshot) {
+                for (const auto &[frame, _] : snapshot) {
                     std::string filename = "event_frame_pre_" + std::to_string(index++) + ".jpg";
-                    cv::imwrite(filename, f);
+                    cv::imwrite(filename, frame);
                 }
-                postEventFrameCount = 0;
+                postEventFramesCaptured = 0;
                 postEventFrames.clear();
             }
 
             if (eventTriggered) {
-                postEventFrames.push_back(frame);
-                postEventFrameCount++;
+                postEventFrames.push_back(tmat);
+                postEventFramesCaptured++;
 
-                if (postEventFrameCount >= postEventFramesToCapture) {
+                if (postEventFramesCaptured >= postEventFramesToCapture) {
                     std::cout << "[EVENT] Saving post-event frames..." << std::endl;
                     for (size_t i = 0; i < postEventFrames.size(); ++i) {
                         std::string filename = "event_frame_post_" + std::to_string(i) + ".jpg";
-                        cv::imwrite(filename, postEventFrames[i]);
+                        cv::imwrite(filename, postEventFrames[i].frame);
                     }
 
                     eventTriggered = false;
@@ -243,10 +244,10 @@ cv::Mat CameraManager::convertFrame(libcamera::FrameBuffer *buffer, const libcam
 
 cv::Mat CameraManager::getLatestFrame() 
 {
-    return frameBuffer.latest();
+    return frameBuffer.latest().frame;
 }
 
-std::vector<cv::Mat> CameraManager::getFrameBuffer() 
+std::vector<Timestamped<cv::Mat>> CameraManager::getFrameBuffer() 
 {
     return frameBuffer.snapshot();
 }

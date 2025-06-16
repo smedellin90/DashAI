@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CircularBuffer.hpp"
+#include "CameraConfig.hpp"
+#include "TimeStamped.hpp"
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
 #include <libcamera/framebuffer.h>
@@ -17,12 +19,12 @@
 
 class CameraManager {
 public:
-    CameraManager(size_t bufferSize = 30);
+    explicit CameraManager(const CameraConfig &config);
     ~CameraManager();
 
     void startCapture();
     cv::Mat getLatestFrame();
-    std::vector<cv::Mat> getFrameBuffer();
+    std::vector<Timestamped<cv::Mat>> getFrameBuffer();
 
 private:
     void captureLoop();
@@ -31,10 +33,9 @@ private:
 
     std::thread captureThread;
     std::atomic<bool> running;
-    // std::mutex bufferMutex;
 
-    // std::deque<cv::Mat> frameBuffer;
-    CircularBuffer<cv::Mat> frameBuffer;
+    CameraConfig config_;
+    CircularBuffer<Timestamped<cv::Mat>> frameBuffer;
     const size_t maxBufferSize = 150;
 
     std::shared_ptr<libcamera::CameraManager> camManager;
@@ -47,10 +48,12 @@ private:
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator;
     
     bool detectEvent(const cv::Mat &frame);
-    bool eventTriggered = false;
-    int postEventFrameCount = 0;
+    std::atomic<bool> eventTriggered = false;
+    std::chrono::steady_clock::time_point eventStartTime;
+
+    int postEventFramesCaptured = 0;
     const int postEventFramesToCapture = 30; // Adjust as needed (e.g., 30 for 3 sec at 10 FPS)
 
-    std::vector<cv::Mat> postEventFrames; // Buffer for post-event capture
+    std::vector<Timestamped<cv::Mat>> postEventFrames; // Buffer for post-event capture
 };
 

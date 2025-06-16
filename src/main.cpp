@@ -1,4 +1,5 @@
 #include "CameraManager.hpp"
+#include "CameraConfig.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -17,7 +18,13 @@ std::string getTimestampedFilename(const std::string &dir = "frames/", const std
 }
 
 int main() {
-    CameraManager cam;
+    CameraConfig config {
+        .preEventDuration = std::chrono::milliseconds(4000),
+        .postEventDuration = std::chrono::milliseconds(5000),
+        .bufferCapacity = 500,
+    };
+
+    CameraManager cam = CameraManager(config);
     cam.startCapture();
 
     std::cout << "[INFO] Camera capture started. Checking for frames..." << std::endl;
