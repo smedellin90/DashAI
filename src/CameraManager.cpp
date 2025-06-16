@@ -216,7 +216,7 @@ cv::Mat CameraManager::getLatestFrame()
     return frameBuffer.latest();
 }
 
-std::deque<cv::Mat> CameraManager::getFrameBuffer() 
+std::vector<cv::Mat> CameraManager::getFrameBuffer() 
 {
     return frameBuffer.snapshot();
 }
