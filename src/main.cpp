@@ -24,7 +24,7 @@ int main() {
 
     int framesCaptured = 0;
 
-    while (framesCaptured < 20) {
+    while (framesCaptured < 100) {
         cv::Mat frame = cam.getLatestFrame();
 
         if (!frame.empty()) {

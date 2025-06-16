@@ -45,5 +45,12 @@ private:
     std::mutex inFlightMutex;
     std::condition_variable inFlightCondition;
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator;
+    
+    bool detectEvent(const cv::Mat &frame);
+    bool eventTriggered = false;
+    int postEventFrameCount = 0;
+    const int postEventFramesToCapture = 30; // Adjust as needed (e.g., 30 for 3 sec at 10 FPS)
+
+    std::vector<cv::Mat> postEventFrames; // Buffer for post-event capture
 };
 

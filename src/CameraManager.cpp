@@ -163,6 +163,36 @@ void CameraManager::handleRequest(libcamera::Request *request) {
 
         if (!frame.empty()) {
             frameBuffer.push(frame);
+            if (!eventTriggered && detectEvent(frame)) {
+                std::cout << "[EVENT] Motion detected. Saving buffer..." << std::endl;
+                eventTriggered = true;
+
+                // Save pre-event frames
+                std::vector<cv::Mat> snapshot = frameBuffer.snapshot();
+                int index = 0;
+                for (const auto &f : snapshot) {
+                    std::string filename = "event_frame_pre_" + std::to_string(index++) + ".jpg";
+                    cv::imwrite(filename, f);
+                }
+                postEventFrameCount = 0;
+                postEventFrames.clear();
+            }
+
+            if (eventTriggered) {
+                postEventFrames.push_back(frame);
+                postEventFrameCount++;
+
+                if (postEventFrameCount >= postEventFramesToCapture) {
+                    std::cout << "[EVENT] Saving post-event frames..." << std::endl;
+                    for (size_t i = 0; i < postEventFrames.size(); ++i) {
+                        std::string filename = "event_frame_post_" + std::to_string(i) + ".jpg";
+                        cv::imwrite(filename, postEventFrames[i]);
+                    }
+
+                    eventTriggered = false;
+                    postEventFrames.clear();
+                }
+            }
         }
     }
 
@@ -219,4 +249,10 @@ cv::Mat CameraManager::getLatestFrame()
 std::vector<cv::Mat> CameraManager::getFrameBuffer() 
 {
     return frameBuffer.snapshot();
+}
+
+bool CameraManager::detectEvent(const cv::Mat& frame) {
+    // Placeholder: return true if motion detected
+    // For now, return false to keep system quiet
+    return false;
 }

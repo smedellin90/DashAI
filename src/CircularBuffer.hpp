@@ -17,7 +17,7 @@ public:
             buffer.pop_front();
 
         if constexpr (std::is_same<T, cv::Mat>::value) {
-            buffer.push_back(item.clone()); // Deep copy for cv::Mat
+            buffer.push_back(item.clone()); 
         } else {
             buffer.push_back(item);
         }
