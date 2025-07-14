@@ -32,9 +32,7 @@ int main() {
     int framesCaptured = 0;
 
     while (framesCaptured < 100) {
-        cv::Mat frame = cam.getLatestFrame();
-
-        if (!frame.empty()) {
+        if (cv::Mat frame = cam.getLatestFrame(); !frame.empty()) {
             std::cout << "[FRAME " << framesCaptured << "] "
                       << "Resolution: " << frame.cols << "x" << frame.rows
                       << ", Mean Pixel: " << cv::mean(frame) << std::endl;

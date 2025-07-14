@@ -22,8 +22,9 @@
 
 // using namespace libcamera;
 
-CameraManager::CameraManager(const CameraConfig &config) 
-    : config_(config), frameBuffer(config.bufferCapacity, config.postEventDuration) {}
+CameraManager::CameraManager(const CameraConfig &config)
+    : running(false), config_(config), frameBuffer(config.bufferCapacity, config.postEventDuration) {
+}
 
 CameraManager::~CameraManager() {
     running = false;

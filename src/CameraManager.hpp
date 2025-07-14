@@ -19,7 +19,7 @@
 
 class CameraManager {
 public:
-    explicit CameraManager(const CameraConfig &config);
+    CameraManager(const CameraConfig &config);
     ~CameraManager();
 
     void startCapture();
